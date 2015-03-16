@@ -1,22 +1,9 @@
-/*
-Next steps for the go project:
-
-Encapsulate the JSON processing and add a test case for it
-
-Set up a Travis CI build that automatically deploys it to Google App Engine
-*/
-
-// You can edit this code!
-// Click here and start typing.
 package main
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/draffensperger/golp"
 	"strconv"
-	"time"
 )
 
 const SampleJSON = `{	
@@ -40,69 +27,11 @@ const SampleJSON = `{
 	"endTaskSchedule": "2015-02-20T00:00:00Z"
 }`
 
-// From: https://gist.github.com/smagch/d2a55c60bbd76930c79f
-type TimeWithoutDate struct {
-	time.Time
-}
-
-type DateWithoutTime struct {
-	time.Time
-}
-
-const TimeLayout = "15:04"
-
-var TimeParseError = errors.New(`TimeParseError: should be a string formatted as "15:04"`)
-
-func (t TimeWithoutDate) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + t.Format(TimeLayout) + `"`), nil
-}
-
-func (t *TimeWithoutDate) UnmarshalJSON(b []byte) error {
-	s := string(b)
-	// len(`"23:59"`) == 7
-	if len(s) != 7 {
-		return TimeParseError
-	}
-	ret, err := time.Parse(TimeLayout, s[1:6])
-	if err != nil {
-		return err
-	}
-	t.Time = ret
-	return nil
-}
-
-type TimeBlock struct {
-	Start TimeWithoutDate
-	End   TimeWithoutDate
-}
-
-type Task struct {
-	Title          string
-	EstimatedHours float64
-	Reward         float64
-	Deadline       time.Time
-	StartOnOrAfter time.Time
-}
-
-type TaskParams struct {
-	TimeZone          string
-	WeeklyTaskBlocks  [][]TimeBlock
-	Tasks             []Task
-	StartTaskSchedule time.Time
-	EndTaskSchedule   time.Time
-}
-
 func main() {
 	var err error
 
-	var f interface{}
-	err = json.Unmarshal([]byte(SampleJSON), &f)
-	if err != nil {
-		fmt.Printf(" %v", err)
-	}
-
 	var taskParams TaskParams
-	err = json.Unmarshal([]byte(SampleJSON), &taskParams)
+	err = ParseTaskParams(SampleJSON, &taskParams)
 	if err != nil {
 		fmt.Printf(" %v", err)
 	}
