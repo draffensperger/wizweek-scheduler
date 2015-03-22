@@ -59,22 +59,21 @@ func TestTaskParams(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		Convey("Values are parsed correctly", func() {
-			So(p.StartTaskSchedule == Date(2015, 02, 16, 0, 0, 0, 0, UTC), ShouldBeTrue)
-			So(p.StartTaskSchedule, ShouldEqual, Date(2015, 02, 16, 0, 0, 0, 0, UTC))
-			So(p.EndTaskSchedule, ShouldHappenWithin, Second, Date(2015, 02, 20, 0, 0, 0, 0, UTC))
+			So(p.StartTaskSchedule, ShouldResemble, Date(2015, 02, 16, 0, 0, 0, 0, UTC))
+			So(p.EndTaskSchedule, ShouldResemble, Date(2015, 02, 20, 0, 0, 0, 0, UTC))
 			So(len(p.Tasks), ShouldEqual, 2)
 
 			task0 := p.Tasks[0]
 			So(task0.Title, ShouldEqual, "Newsletter")
 			So(task0.EstimatedHours, ShouldEqual, 6)
 			So(task0.Reward, ShouldEqual, 6)
-			So(task0.Deadline, ShouldEqual, Date(2015, 02, 16, 21, 0, 0, 0, UTC))
+			So(task0.Deadline, ShouldResemble, Date(2015, 02, 16, 21, 0, 0, 0, UTC))
 
 			task1 := p.Tasks[1]
 			So(task1.Title, ShouldEqual, "Reimbursements")
 			So(task1.EstimatedHours, ShouldEqual, 1)
 			So(task1.Reward, ShouldEqual, 3)
-			So(task1.Deadline, ShouldEqual, Date(2015, 02, 17, 21, 0, 0, 0, UTC))
+			So(task1.Deadline, ShouldResemble, Date(2015, 02, 17, 21, 0, 0, 0, UTC))
 
 			So(len(p.WeeklyTaskBlocks), ShouldEqual, 7)
 			for i, taskBlockLen := range []int{0, 1, 1, 1, 1, 1, 0} {
