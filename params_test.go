@@ -1,9 +1,35 @@
-package main
+/*
 
+current:
+https://github.com/onsi/ginkgo
+https://github.com/onsi/gomega
+https://github.com/smartystreets/goconvey
+https://github.com/stretchr/testify/
+https://github.com/franela/goblin
+
+maybe:
+https://github.com/pranavraja/zen
+https://github.com/go-check/check
+https://github.com/azer/mao
+
+old:
+
+ https://github.com/remogatto/prettytest
+ https://github.com/bmatsuo/go-spec
+ https://github.com/orfjackal/gospec
+
+meta:
+
+https://github.com/shageman/gotestit
+*/
+
+package schedule
+
+// . "https://github.com/stretchr/testify/assert"
 import (
-	"github.com/stretchr/testify/assert"
+	. "github.com/smartystreets/goconvey/convey"
 	"testing"
-	"time"
+	. "time"
 )
 
 const sampleJSON = `{	
@@ -27,33 +53,45 @@ const sampleJSON = `{
 }`
 
 func TestTaskParams(t *testing.T) {
-	var params TaskParams
-	err := ParseTaskParams(sampleJSON, &params)
-	assert.Nil(t, err)
+	Convey("When task params parsed from JSON", t, func() {
+		var p TaskParams
+		err := ParseTaskParams(sampleJSON, &p)
+		So(err, ShouldBeNil)
 
-	assert.Equal(t, time.Date(2015, 02, 16, 0, 0, 0, 0, time.UTC), params.StartTaskSchedule)
-	assert.Equal(t, time.Date(2015, 02, 20, 0, 0, 0, 0, time.UTC), params.EndTaskSchedule)
-	assert.Equal(t, 2, len(params.Tasks))
+		Convey("Values are parsed correctly", func() {
+			So(p.StartTaskSchedule == Date(2015, 02, 16, 0, 0, 0, 0, UTC), ShouldBeTrue)
+			So(p.StartTaskSchedule, ShouldEqual, Date(2015, 02, 16, 0, 0, 0, 0, UTC))
+			So(p.EndTaskSchedule, ShouldHappenWithin, Second, Date(2015, 02, 20, 0, 0, 0, 0, UTC))
+			So(len(p.Tasks), ShouldEqual, 2)
 
-	task0 := params.Tasks[0]
-	assert.Equal(t, "Newsletter", task0.Title)
-	assert.Equal(t, 6, task0.EstimatedHours)
-	assert.Equal(t, 6, task0.Reward)
-	assert.Equal(t, time.Date(2015, 02, 16, 21, 0, 0, 0, time.UTC), task0.Deadline)
+			task0 := p.Tasks[0]
+			So(task0.Title, ShouldEqual, "Newsletter")
+			So(task0.EstimatedHours, ShouldEqual, 6)
+			So(task0.Reward, ShouldEqual, 6)
+			So(task0.Deadline, ShouldEqual, Date(2015, 02, 16, 21, 0, 0, 0, UTC))
 
-	task1 := params.Tasks[1]
-	assert.Equal(t, "Reimbursements", task1.Title)
-	assert.Equal(t, 1, task1.EstimatedHours)
-	assert.Equal(t, 3, task1.Reward)
-	assert.Equal(t, time.Date(2015, 02, 17, 21, 0, 0, 0, time.UTC), task1.Deadline)
+			task1 := p.Tasks[1]
+			So(task1.Title, ShouldEqual, "Reimbursements")
+			So(task1.EstimatedHours, ShouldEqual, 1)
+			So(task1.Reward, ShouldEqual, 3)
+			So(task1.Deadline, ShouldEqual, Date(2015, 02, 17, 21, 0, 0, 0, UTC))
 
-	assert.Equal(t, 7, len(params.WeeklyTaskBlocks))
-	for i, taskBlockLen := range []int{0, 1, 1, 1, 1, 1, 0} {
-		assert.Equal(t, taskBlockLen, len(params.WeeklyTaskBlocks[i]))
-		if taskBlockLen > 0 {
-			taskBlock := params.WeeklyTaskBlocks[i][0]
-			assert.Equal(t, 10, taskBlock.Start.Hour())
-			assert.Equal(t, 16, taskBlock.End.Hour())
-		}
-	}
+			So(len(p.WeeklyTaskBlocks), ShouldEqual, 7)
+			for i, taskBlockLen := range []int{0, 1, 1, 1, 1, 1, 0} {
+				So(len(p.WeeklyTaskBlocks[i]), ShouldEqual, taskBlockLen)
+				if taskBlockLen > 0 {
+					taskBlock := p.WeeklyTaskBlocks[i][0]
+					So(taskBlock.Start.Hour(), ShouldEqual, 10)
+					So(taskBlock.End.Hour(), ShouldEqual, 16)
+				}
+			}
+		})
+	})
 }
+
+//func TestTaskHours(t *testing.T) {
+//	var params TaskParams
+//	ParseTaskParams(sampleJSON, &params)
+//	hours := params.TaskHours
+//	assert.Equal()
+//}

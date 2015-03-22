@@ -1,4 +1,4 @@
-package main
+package schedule
 
 import (
 	"encoding/json"
@@ -61,3 +61,14 @@ func (t *TimeWithoutDate) UnmarshalJSON(b []byte) error {
 	t.Time = ret
 	return nil
 }
+
+//func (params *TaskParams) TaskHours(horizonDays int) []time.Time {
+
+//	// Needs to break down into a bunch of different things ...
+
+//	// begin with params.StartTaskSchedule and look at the weekly task blocks
+//	// would like to add support for appointments
+//	// return times with the specified time zone for the task params
+//	// return that list
+//	// go until horizonDays
+//}
