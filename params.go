@@ -3,13 +3,8 @@ package schedule
 import (
 	"encoding/json"
 	"errors"
-	"github.com/k0kubun/pp"
 	. "time"
 )
-
-func p(x interface{}) {
-	pp.Println(x)
-}
 
 func ParseTaskParams(paramsJSON string, params *TaskParams) error {
 	if err := json.Unmarshal([]byte(paramsJSON), params); err != nil {
@@ -91,28 +86,47 @@ func (t *TimeWithoutDate) UnmarshalJSON(b []byte) error {
 //	}
 //}
 
-func (params *TaskParams) TaskHours() []Time {
-	/*
-		General strategy:
-		1. Start at the start of the first time block. Move forward hour by hour
-		skip hours if there is an appointment during that hour.
-		2. When finished with the first time block, move to the next one
-		3. When done with the last time block, move back to the first but the next week
-		4. Return the list of available hours
-	*/
-	//	tz = params.TimeZone.Location
+func (tp TaskParams) moveTimeToNextBlock(t *Time) (blockEnd Time) {
+	blockStart := Time{}
+	blockEnd = Time{}
+	for weekdays := 0; weekdays < 7; weekdays++ {
+		pf("weekday for time: ", t)
+		pf("weekday: ", t.Weekday())
+		for _, block := range tp.WeeklyTaskBlocks[t.Weekday()] {
+			year, month, day := t.Truncate(Hour).Date()
+			blockStart = Date(year, month, day, block.Start.Hour(), block.Start.Minute(), 0, 0, tp.Location)
+			blockEnd = Date(year, month, day, block.End.Hour(), block.End.Minute(), 0, 0, tp.Location)
 
-	//	blockStartEndTimes = make([][2]Time)
-	//	weekStart = params.StartTaskSchedule.Weekday()
-	//	blocks = params.WeeklyTaskBlocks
-	//	block = [params.StartTaskSchedule.Weekday()]
+			if t.Before(blockStart) {
+				*t = blockStart
+			}
+			if t.Add(Hour).Before(blockEnd) {
+				return blockEnd
+			}
+		}
+		*t = t.Add(Duration(24-t.Hour()) * Hour)
+	}
+	return blockEnd
+}
 
-	//	hours := make([]Time)
-	//	cur := params.StartTaskSchedule
-	//	for cur < params.EndTaskSchedule {
-	//		cur
-	//		hours = append(hours, cur)
-	//	}
+func (tp TaskParams) TaskHours() []Time {
+	taskHours := make([]Time, 0)
+	t := tp.StartTaskSchedule
 
-	return []Time{Date(2015, 02, 16, 0, 0, 0, 0, UTC)}
+	blockEnd := tp.moveTimeToNextBlock(&t)
+	hourAhead := t.Add(Hour)
+
+	for hourAhead.Before(tp.EndTaskSchedule) {
+		if hourAhead.Before(blockEnd) || hourAhead.Equal(blockEnd) {
+			taskHours = append(taskHours, t)
+			t = hourAhead
+		} else {
+			blockEnd = tp.moveTimeToNextBlock(&t)
+			pf("moved time to next block end: ", blockEnd)
+			pf("moved time: ", t)
+		}
+		hourAhead = t.Add(Hour)
+	}
+
+	return taskHours
 }

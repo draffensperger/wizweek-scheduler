@@ -27,12 +27,19 @@ package schedule
 
 // . "https://github.com/stretchr/testify/assert"
 import (
+	"github.com/k0kubun/pp"
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 	. "time"
 )
 
-// Monday Feb 9 - Saturday, Feb 21
+func p(x interface{}) {
+	pp.Println(x)
+}
+
+func pf(f string, x interface{}) {
+	pp.Printf(f+" %v\n", x)
+}
 
 const sampleJSON = `{	
 	"timeZone": "America/New_York",
@@ -62,37 +69,37 @@ func DateHour(year int, month Month, day, hour int) Time {
 
 func TestTaskParams(t *testing.T) {
 	Convey("When task params parsed from JSON", t, func() {
-		var p TaskParams
-		err := ParseTaskParams(sampleJSON, &p)
+		var tp TaskParams
+		err := ParseTaskParams(sampleJSON, &tp)
 		So(err, ShouldBeNil)
 
 		Convey("Values are parsed correctly", func() {
-			So(p.TimeZoneName, ShouldEqual, "America/New_York")
+			So(tp.TimeZoneName, ShouldEqual, "America/New_York")
 			EST, err = LoadLocation("America/New_York")
 			So(err, ShouldBeNil)
-			So(p.Location, ShouldResemble, EST)
+			So(tp.Location, ShouldResemble, EST)
 
-			So(p.StartTaskSchedule, ShouldResemble, DateHour(2015, 2, 16, 9))
-			So(p.EndTaskSchedule, ShouldResemble, DateHour(2015, 2, 20, 17))
-			So(len(p.Tasks), ShouldEqual, 2)
+			So(tp.StartTaskSchedule, ShouldResemble, DateHour(2015, 2, 16, 9))
+			So(tp.EndTaskSchedule, ShouldResemble, DateHour(2015, 2, 20, 17))
+			So(len(tp.Tasks), ShouldEqual, 2)
 
-			task0 := p.Tasks[0]
+			task0 := tp.Tasks[0]
 			So(task0.Title, ShouldEqual, "Newsletter")
 			So(task0.EstimatedHours, ShouldEqual, 6)
 			So(task0.Reward, ShouldEqual, 6)
 			So(task0.Deadline, ShouldResemble, DateHour(2015, 2, 16, 17))
 
-			task1 := p.Tasks[1]
+			task1 := tp.Tasks[1]
 			So(task1.Title, ShouldEqual, "Reimbursements")
 			So(task1.EstimatedHours, ShouldEqual, 1)
 			So(task1.Reward, ShouldEqual, 3)
 			So(task1.Deadline, ShouldResemble, DateHour(2015, 2, 17, 17))
 
-			So(len(p.WeeklyTaskBlocks), ShouldEqual, 7)
+			So(len(tp.WeeklyTaskBlocks), ShouldEqual, 7)
 			for i, taskBlockLen := range []int{0, 1, 1, 1, 1, 1, 0} {
-				So(len(p.WeeklyTaskBlocks[i]), ShouldEqual, taskBlockLen)
+				So(len(tp.WeeklyTaskBlocks[i]), ShouldEqual, taskBlockLen)
 				if taskBlockLen > 0 {
-					taskBlock := p.WeeklyTaskBlocks[i][0]
+					taskBlock := tp.WeeklyTaskBlocks[i][0]
 					So(taskBlock.Start.Hour(), ShouldEqual, 10)
 					So(taskBlock.End.Hour(), ShouldEqual, 16)
 				}
@@ -105,27 +112,29 @@ const json2 = `{
 	"timeZone": "America/New_York",
 	"weeklyTaskBlocks": [
 		[],
-		[{"start": "10:00", "end": "12:00"}],
-		[{"start": "13:00", "end": "15:00"}],
-		[{"start": "18:00", "end": "19:00"}],
-		[],
-		[{"start": "9:00", "end": "10:00"}, {"start": "15:00", "end": "17:00"}],
+		[{"start": "10:00", "end": "16:00"}],
+		[{"start": "10:00", "end": "16:00"}],
+		[{"start": "10:00", "end": "16:00"}],
+		[{"start": "10:00", "end": "16:00"}],
+		[{"start": "10:00", "end": "16:00"}],
 		[]
 	],	
-	"appointments": [
-		{ "title": "Meeting1", "start": "2015-02-16T00:00:00Z", "end": "2015-02-16T00:00:00Z" },
-		{ "title": "Meeting2", "start": "2015-02-16T00:00:00Z", "end": "2015-02-16T00:00:00Z" }
+	"appointments": [	],
+	"tasks": [
+		{"title": "Newsletter", "estimatedHours": 6, "reward": 6, "deadline": "2015-02-16T22:00:00Z"},
+		{"title": "Reimbursements", "estimatedHours": 1, "reward": 3, "deadline": "2015-02-17T22:00:00Z"}
 	],
-	"tasks": [	],
-	"startTaskSchedule": "2015-02-16T00:00:00Z",
-	"endTaskSchedule": "2015-02-20T00:00:00Z"
+	"startTaskSchedule": "2015-02-16T14:00:00Z",
+	"endTaskSchedule": "2015-02-20T22:00:00Z"
 }`
 
 func TestTaskHours(t *testing.T) {
 	Convey("With task params specified it produces a series of task hour start times", t, func() {
-		var params TaskParams
-		ParseTaskParams(json2, &params)
-		hours := params.TaskHours()
-		So(len(hours), ShouldEqual, 1)
+		var tp TaskParams
+		ParseTaskParams(json2, &tp)
+		hours := tp.TaskHours()
+		p(hours)
+		So(len(hours), ShouldEqual, 5)
+		So(hours, ShouldResemble, []Time{})
 	})
 }
