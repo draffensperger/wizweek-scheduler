@@ -3,6 +3,8 @@ package schedule
 import (
 	"encoding/json"
 	"errors"
+	"strconv"
+	"strings"
 	. "time"
 )
 
@@ -67,31 +69,28 @@ func (t TimeWithoutDate) MarshalJSON() ([]byte, error) {
 
 func (t *TimeWithoutDate) UnmarshalJSON(b []byte) error {
 	s := string(b)
-	// len(`"23:59"`) == 7
-	if len(s) != 7 {
+	s = s[1 : len(s)-1] // Get rid of the enclosing quotes
+	timeParts := strings.Split(s, ":")
+	if len(timeParts) != 2 {
 		return TimeParseError
 	}
-	ret, err := Parse(TimeLayout, s[1:6])
+	hour, err := strconv.Atoi(timeParts[0])
 	if err != nil {
 		return err
 	}
-	t.Time = ret
+	minute, err := strconv.Atoi(timeParts[1])
+	if err != nil {
+		return err
+	}
+
+	t.Time = Date(0, 0, 0, hour, minute, 0, 0, UTC)
 	return nil
 }
-
-//func (tp *TaskParams) UnmarshalJSON(b []byte) error {
-//	tpAutoUnmarshal := taskParamsAutoUnmarshal{}
-//	if json.Unmarshal(b, &tpAutoUnmarshal); err == nil {
-//		tp
-//	}
-//}
 
 func (tp TaskParams) moveTimeToNextBlock(t *Time) (blockEnd Time) {
 	blockStart := Time{}
 	blockEnd = Time{}
 	for weekdays := 0; weekdays < 7; weekdays++ {
-		pf("weekday for time: ", t)
-		pf("weekday: ", t.Weekday())
 		for _, block := range tp.WeeklyTaskBlocks[t.Weekday()] {
 			year, month, day := t.Truncate(Hour).Date()
 			blockStart = Date(year, month, day, block.Start.Hour(), block.Start.Minute(), 0, 0, tp.Location)
@@ -100,7 +99,7 @@ func (tp TaskParams) moveTimeToNextBlock(t *Time) (blockEnd Time) {
 			if t.Before(blockStart) {
 				*t = blockStart
 			}
-			if t.Add(Hour).Before(blockEnd) {
+			if !t.Add(Hour).After(blockEnd) {
 				return blockEnd
 			}
 		}
@@ -112,18 +111,15 @@ func (tp TaskParams) moveTimeToNextBlock(t *Time) (blockEnd Time) {
 func (tp TaskParams) TaskHours() []Time {
 	taskHours := make([]Time, 0)
 	t := tp.StartTaskSchedule
-
 	blockEnd := tp.moveTimeToNextBlock(&t)
 	hourAhead := t.Add(Hour)
 
-	for hourAhead.Before(tp.EndTaskSchedule) {
-		if hourAhead.Before(blockEnd) || hourAhead.Equal(blockEnd) {
+	for !hourAhead.After(tp.EndTaskSchedule) {
+		if hourAhead.After(blockEnd) {
+			blockEnd = tp.moveTimeToNextBlock(&t)
+		} else {
 			taskHours = append(taskHours, t)
 			t = hourAhead
-		} else {
-			blockEnd = tp.moveTimeToNextBlock(&t)
-			pf("moved time to next block end: ", blockEnd)
-			pf("moved time: ", t)
 		}
 		hourAhead = t.Add(Hour)
 	}

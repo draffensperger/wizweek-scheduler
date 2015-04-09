@@ -112,11 +112,11 @@ const json2 = `{
 	"timeZone": "America/New_York",
 	"weeklyTaskBlocks": [
 		[],
-		[{"start": "10:00", "end": "16:00"}],
-		[{"start": "10:00", "end": "16:00"}],
-		[{"start": "10:00", "end": "16:00"}],
-		[{"start": "10:00", "end": "16:00"}],
-		[{"start": "10:00", "end": "16:00"}],
+		[{"start": "10:00", "end": "12:00"}],
+		[{"start": "9:00", "end": "10:00"}, {"start": "11:30", "end": "14:30"}],
+		[],
+		[],
+		[{"start": "16:00", "end": "18:00"}],
 		[]
 	],	
 	"appointments": [	],
@@ -125,7 +125,7 @@ const json2 = `{
 		{"title": "Reimbursements", "estimatedHours": 1, "reward": 3, "deadline": "2015-02-17T22:00:00Z"}
 	],
 	"startTaskSchedule": "2015-02-16T14:00:00Z",
-	"endTaskSchedule": "2015-02-20T22:00:00Z"
+	"endTaskSchedule": "2015-02-25T22:00:00Z"
 }`
 
 func TestTaskHours(t *testing.T) {
@@ -133,8 +133,25 @@ func TestTaskHours(t *testing.T) {
 		var tp TaskParams
 		ParseTaskParams(json2, &tp)
 		hours := tp.TaskHours()
-		p(hours)
-		So(len(hours), ShouldEqual, 5)
-		So(hours, ShouldResemble, []Time{})
+		So(len(hours), ShouldEqual, 14)
+
+		EST, err := LoadLocation("America/New_York")
+		So(err, ShouldBeNil)
+		So(hours, ShouldResemble, []Time{
+			Date(2015, 2, 16, 10, 0, 0, 0, EST),
+			Date(2015, 2, 16, 11, 0, 0, 0, EST),
+			Date(2015, 2, 17, 9, 0, 0, 0, EST),
+			Date(2015, 2, 17, 11, 30, 0, 0, EST),
+			Date(2015, 2, 17, 12, 30, 0, 0, EST),
+			Date(2015, 2, 17, 13, 30, 0, 0, EST),
+			Date(2015, 2, 20, 16, 0, 0, 0, EST),
+			Date(2015, 2, 20, 17, 0, 0, 0, EST),
+			Date(2015, 2, 23, 10, 0, 0, 0, EST),
+			Date(2015, 2, 23, 11, 0, 0, 0, EST),
+			Date(2015, 2, 24, 9, 0, 0, 0, EST),
+			Date(2015, 2, 24, 11, 30, 0, 0, EST),
+			Date(2015, 2, 24, 12, 30, 0, 0, EST),
+			Date(2015, 2, 24, 13, 30, 0, 0, EST),
+		})
 	})
 }
