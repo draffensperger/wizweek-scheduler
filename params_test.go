@@ -132,7 +132,7 @@ func TestTaskHours(t *testing.T) {
 	Convey("With task params specified it produces a series of task hour start times", t, func() {
 		var tp TaskParams
 		ParseTaskParams(json2, &tp)
-		hours := tp.TaskHours()
+		hours := tp.TaskHours
 		So(len(hours), ShouldEqual, 14)
 
 		EST, err := LoadLocation("America/New_York")
@@ -153,5 +153,48 @@ func TestTaskHours(t *testing.T) {
 			Date(2015, 2, 24, 12, 30, 0, 0, EST),
 			Date(2015, 2, 24, 13, 30, 0, 0, EST),
 		})
+	})
+}
+
+const json3 = `{	
+	"timeZone": "America/New_York",
+	"weeklyTaskBlocks": [
+		[],
+		[{"start": "10:00", "end": "12:00"}],
+		[{"start": "9:00", "end": "10:00"}, {"start": "11:30", "end": "14:30"}],
+		[],
+		[],
+		[{"start": "16:00", "end": "18:00"}],
+		[]
+	],	
+	"appointments": [	],
+	"tasks": [
+		{"title": "Newsletter", "estimatedHours": 2, "reward": 6, "deadline": "2015-02-20T22:00:00Z", "startOnOrAfter": "2015-02-17T15:00:00Z"},
+		{"title": "Reimbursements", "estimatedHours": 1, "reward": 3, "deadline": "2015-02-23T22:00:00Z"},
+		{"title": "Plan study", "estimatedHours": 1, "reward": 3, "startOnOrAfter": "2015-02-18T15:00:00Z"},
+		{"title": "Past due", "estimatedHours": 1, "reward": 3, "deadline": "2015-01-01T22:00:00Z"},
+		{"title": "Admin work", "estimatedHours": 1, "reward": 3}				
+	],
+	"startTaskSchedule": "2015-02-16T14:00:00Z",
+	"endTaskSchedule": "2015-02-25T22:00:00Z"
+}`
+
+func TestDeadlineAndOnOrAfter(t *testing.T) {
+	Convey("With task params specified it sets the hour indicies for deadlines and start on or after", t, func() {
+		var tp TaskParams
+		ParseTaskParams(json3, &tp)
+		tasks := tp.Tasks
+
+		So(len(tasks), ShouldEqual, 5)
+		So(tasks[0].DeadlineHourIndex, ShouldEqual, 6)
+		So(tasks[0].StartOnOrAfterHourIndex, ShouldEqual, 3)
+		So(tasks[1].DeadlineHourIndex, ShouldEqual, 9)
+		So(tasks[1].StartOnOrAfterHourIndex, ShouldEqual, 0)
+		So(tasks[2].DeadlineHourIndex, ShouldEqual, len(tp.TaskHours))
+		So(tasks[2].StartOnOrAfterHourIndex, ShouldEqual, 6)
+		So(tasks[3].DeadlineHourIndex, ShouldEqual, -1)
+		So(tasks[3].StartOnOrAfterHourIndex, ShouldEqual, 0)
+		So(tasks[4].DeadlineHourIndex, ShouldEqual, len(tp.TaskHours))
+		So(tasks[4].StartOnOrAfterHourIndex, ShouldEqual, 0)
 	})
 }

@@ -8,17 +8,24 @@ import (
 	. "time"
 )
 
-func ParseTaskParams(paramsJSON string, params *TaskParams) error {
-	if err := json.Unmarshal([]byte(paramsJSON), params); err != nil {
+func ParseTaskParams(paramsJSON string, tp *TaskParams) error {
+	if err := json.Unmarshal([]byte(paramsJSON), tp); err != nil {
 		return err
 	}
 
-	loc, err := LoadLocation(params.TimeZoneName)
+	loc, err := LoadLocation(tp.TimeZoneName)
 	if err != nil {
 		return err
 	}
-	params.Location = loc
-	params.localizeTimes()
+	tp.Location = loc
+	tp.localizeTimes()
+	tp.calculateTaskHours()
+
+	for i := 0; i < len(tp.Tasks); i++ {
+		tp.Tasks[i].DeadlineHourIndex = tp.deadlineAsTaskHour(tp.Tasks[i].Deadline)
+		tp.Tasks[i].StartOnOrAfterHourIndex = tp.onOrAfterAsTaskHour(tp.Tasks[i].StartOnOrAfter)
+	}
+
 	return nil
 }
 
@@ -39,14 +46,17 @@ type TaskParams struct {
 	Tasks             []Task
 	StartTaskSchedule Time
 	EndTaskSchedule   Time
+	TaskHours         []Time
 }
 
 type Task struct {
-	Title          string
-	EstimatedHours float64
-	Reward         float64
-	Deadline       Time
-	StartOnOrAfter Time
+	Title                   string
+	EstimatedHours          float64
+	Reward                  float64
+	Deadline                Time
+	DeadlineHourIndex       int
+	StartOnOrAfter          Time
+	StartOnOrAfterHourIndex int
 }
 
 type TimeBlock struct {
@@ -108,7 +118,7 @@ func (tp TaskParams) moveTimeToNextBlock(t *Time) (blockEnd Time) {
 	return blockEnd
 }
 
-func (tp TaskParams) TaskHours() []Time {
+func (tp *TaskParams) calculateTaskHours() {
 	taskHours := make([]Time, 0)
 	t := tp.StartTaskSchedule
 	blockEnd := tp.moveTimeToNextBlock(&t)
@@ -124,5 +134,37 @@ func (tp TaskParams) TaskHours() []Time {
 		hourAhead = t.Add(Hour)
 	}
 
-	return taskHours
+	tp.TaskHours = taskHours
+}
+
+// Return the index for the start of the last hour that you could work on a task to finish it by time t
+// Could be optimized to use binary search
+func (tp TaskParams) deadlineAsTaskHour(deadline Time) int {
+	if deadline.IsZero() {
+		// If deadline is unspecified return the value just after the end
+		return len(tp.TaskHours)
+	}
+
+	for taskHour := len(tp.TaskHours) - 1; taskHour >= 0; taskHour-- {
+		hourAhead := tp.TaskHours[taskHour].Add(Hour)
+		if !hourAhead.After(deadline) {
+			return taskHour
+		}
+	}
+
+	return -1 // Deadline is before the first task
+}
+
+// Return the index for the start of the first hour that you could work on a task to if you are only allowed to work on it starting on or after time t
+// Could be optimized to use binary search
+func (tp TaskParams) onOrAfterAsTaskHour(onOrAfter Time) int {
+	if onOrAfter.IsZero() {
+		return 0
+	}
+	for taskHour, taskHourTime := range tp.TaskHours {
+		if !taskHourTime.Before(onOrAfter) {
+			return taskHour
+		}
+	}
+	return -1 // Can't start this task in the time horizon given
 }
