@@ -3,6 +3,8 @@ package schedule
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/draffensperger/golp"
 	"strconv"
 	"strings"
 	. "time"
@@ -26,6 +28,8 @@ func ParseTaskParams(paramsJSON string, tp *TaskParams) error {
 		tp.Tasks[i].StartOnOrAfterHourIndex = tp.onOrAfterAsTaskHour(tp.Tasks[i].StartOnOrAfter)
 	}
 
+	tp.setupLP()
+
 	return nil
 }
 
@@ -47,6 +51,8 @@ type TaskParams struct {
 	StartTaskSchedule Time
 	EndTaskSchedule   Time
 	TaskHours         []Time
+	lp                *golp.LP
+	TaskSchedule      []*Task
 }
 
 type Task struct {
@@ -167,4 +173,140 @@ func (tp TaskParams) onOrAfterAsTaskHour(onOrAfter Time) int {
 		}
 	}
 	return -1 // Can't start this task in the time horizon given
+}
+
+func (tp TaskParams) deadlineInPastErr() error {
+	for _, task := range tp.Tasks {
+		if task.DeadlineHourIndex < 0 {
+			return errors.New(`Deadline in the past for task`)
+		}
+	}
+	return nil
+}
+
+func (tp *TaskParams) calculateSchedule() error {
+	if err := tp.deadlineInPastErr(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (tp *TaskParams) setupLP() {
+	ncol := len(tp.Tasks) * len(tp.TaskHours)
+
+	tp.lp = golp.NewLP(0, ncol)
+	tp.setColNames()
+	tp.addHourConstraints()
+	tp.addTaskConstraints()
+	tp.addDeadlineConstraints()
+	tp.addStartContraints()
+	tp.addObjectiveFunction()
+
+	fmt.Println("\n")
+	// fmt.Println("LP formulation:")
+	// tp.lp.WriteToStdout()
+
+	ret := tp.lp.Solve()
+	fmt.Printf("Solve returned: %v\n", ret)
+
+	//obj := tp.lp.GetObjective()
+	//fmt.Printf("Objective value: %v\n", obj)
+
+}
+
+func (tp *TaskParams) getTaskSchedule() {
+	vars := tp.lp.GetVariables()
+	tp.TaskSchedule = make([]*Task, len(tp.TaskHours))
+	for hour := 0; hour < len(tp.TaskHours); hour++ {
+		for taskNum := 0; taskNum < len(tp.Tasks); taskNum++ {
+			val := vars[tp.col(hour, taskNum)]
+			if val == 1.0 {
+				tp.TaskSchedule[hour] = &tp.Tasks[taskNum]
+			}
+			// nameStr := "h" + strconv.Itoa(hour) + "_t" + strconv.Itoa(taskNum)
+			// fmt.Printf("%v: %v\n", nameStr, val)
+		}
+	}
+}
+
+func (tp *TaskParams) writeLPOutput() {
+
+}
+
+func (tp TaskParams) col(hour, taskNum int) int {
+	return hour*len(tp.Tasks) + taskNum
+}
+
+func (tp *TaskParams) setColNames() {
+	for hour := 0; hour < len(tp.TaskHours); hour++ {
+		for taskNum := 0; taskNum < len(tp.Tasks); taskNum++ {
+			tp.lp.SetColName(tp.col(hour, taskNum), "h"+strconv.Itoa(hour)+"_t"+strconv.Itoa(taskNum))
+		}
+	}
+}
+
+func (tp *TaskParams) addHourConstraints() {
+	// Total tasks done in a hour must be <= 1
+	for hour := 0; hour < len(tp.TaskHours); hour++ {
+		entries := make([]golp.Entry, len(tp.Tasks))
+		for taskNum := 0; taskNum < len(tp.Tasks); taskNum++ {
+			entries[taskNum].Col = tp.col(hour, taskNum)
+			entries[taskNum].Val = 1.0
+		}
+		tp.lp.AddConstraintSparse(entries, golp.LE, 1.0)
+	}
+}
+
+func (tp *TaskParams) addTaskConstraints() {
+	// Total amount done on each task must be <= task.EstimatedHours
+	for taskNum, task := range tp.Tasks {
+		entries := make([]golp.Entry, len(tp.TaskHours))
+		for hour := 0; hour < len(tp.TaskHours); hour++ {
+			entries[hour].Col = tp.col(hour, taskNum)
+			entries[hour].Val = 1.0
+		}
+		tp.lp.AddConstraintSparse(entries, golp.LE, task.EstimatedHours)
+	}
+}
+
+func (tp *TaskParams) addDeadlineConstraints() {
+	// Total amount done on task with deadline up to the deadline hour index must equal the estimated hours
+	for taskNum, task := range tp.Tasks {
+		if task.DeadlineHourIndex < len(tp.Tasks) && task.DeadlineHourIndex >= 0 {
+			entries := make([]golp.Entry, task.DeadlineHourIndex+1)
+			for hour := 0; hour <= task.DeadlineHourIndex; hour++ {
+				entries[hour].Col = tp.col(hour, taskNum)
+				entries[hour].Val = 1.0
+			}
+			tp.lp.AddConstraintSparse(entries, golp.EQ, task.EstimatedHours)
+		}
+	}
+}
+
+func (tp *TaskParams) addStartContraints() {
+	// Total amount done on task with deadline up to the deadline hour index must equal zero
+	for taskNum, task := range tp.Tasks {
+		if task.StartOnOrAfterHourIndex > 0 {
+			entries := make([]golp.Entry, task.StartOnOrAfterHourIndex)
+			for hour := 0; hour < task.StartOnOrAfterHourIndex; hour++ {
+				entries[hour].Col = tp.col(hour, taskNum)
+				entries[hour].Val = 1.0
+			}
+			tp.lp.AddConstraintSparse(entries, golp.EQ, 0.0)
+		}
+	}
+}
+
+func (tp *TaskParams) addObjectiveFunction() {
+	// Objective function
+	decayRate := 0.95
+	curHourValue := 1.0
+	row := make([]float64, len(tp.Tasks)*len(tp.TaskHours))
+	for hour := 0; hour < len(tp.TaskHours); hour++ {
+		for taskNum, task := range tp.Tasks {
+			row[tp.col(hour, taskNum)] = curHourValue * task.Reward / task.EstimatedHours
+		}
+		curHourValue *= decayRate
+	}
+	tp.lp.SetObjFn(row, true)
 }
