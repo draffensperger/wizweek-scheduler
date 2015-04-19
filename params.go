@@ -3,7 +3,6 @@ package schedule
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/draffensperger/golp"
 	"strconv"
 	"strings"
@@ -28,7 +27,21 @@ func ParseTaskParams(paramsJSON string, tp *TaskParams) error {
 		tp.Tasks[i].StartOnOrAfterHourIndex = tp.onOrAfterAsTaskHour(tp.Tasks[i].StartOnOrAfter)
 	}
 
-	tp.setupLP()
+	return nil
+}
+
+func (tp *TaskParams) CalcSchedule() error {
+	if err := tp.setupLP(); err != nil {
+		return err
+	}
+
+	tp.lp.SetVerboseLevel(golp.IMPORTANT)
+	ret := tp.lp.Solve()
+	if ret != 0 {
+		return errors.New(`Could not solve linear program`)
+	}
+
+	tp.interpretLPResults()
 
 	return nil
 }
@@ -191,7 +204,7 @@ func (tp *TaskParams) calculateSchedule() error {
 	return nil
 }
 
-func (tp *TaskParams) setupLP() {
+func (tp *TaskParams) setupLP() error {
 	ncol := len(tp.Tasks) * len(tp.TaskHours)
 
 	tp.lp = golp.NewLP(0, ncol)
@@ -202,35 +215,7 @@ func (tp *TaskParams) setupLP() {
 	tp.addStartContraints()
 	tp.addObjectiveFunction()
 
-	fmt.Println("\n")
-	// fmt.Println("LP formulation:")
-	// tp.lp.WriteToStdout()
-
-	ret := tp.lp.Solve()
-	fmt.Printf("Solve returned: %v\n", ret)
-
-	//obj := tp.lp.GetObjective()
-	//fmt.Printf("Objective value: %v\n", obj)
-
-}
-
-func (tp *TaskParams) getTaskSchedule() {
-	vars := tp.lp.GetVariables()
-	tp.TaskSchedule = make([]*Task, len(tp.TaskHours))
-	for hour := 0; hour < len(tp.TaskHours); hour++ {
-		for taskNum := 0; taskNum < len(tp.Tasks); taskNum++ {
-			val := vars[tp.col(hour, taskNum)]
-			if val == 1.0 {
-				tp.TaskSchedule[hour] = &tp.Tasks[taskNum]
-			}
-			// nameStr := "h" + strconv.Itoa(hour) + "_t" + strconv.Itoa(taskNum)
-			// fmt.Printf("%v: %v\n", nameStr, val)
-		}
-	}
-}
-
-func (tp *TaskParams) writeLPOutput() {
-
+	return nil
 }
 
 func (tp TaskParams) col(hour, taskNum int) int {
@@ -309,4 +294,23 @@ func (tp *TaskParams) addObjectiveFunction() {
 		curHourValue *= decayRate
 	}
 	tp.lp.SetObjFn(row, true)
+}
+
+func (tp *TaskParams) interpretLPResults() {
+	vars := tp.lp.GetVariables()
+	tp.TaskSchedule = make([]*Task, len(tp.TaskHours))
+	for hour := 0; hour < len(tp.TaskHours); hour++ {
+		for taskNum := 0; taskNum < len(tp.Tasks); taskNum++ {
+			val := vars[tp.col(hour, taskNum)]
+			if val == 1.0 {
+				tp.TaskSchedule[hour] = &tp.Tasks[taskNum]
+			}
+			// nameStr := "h" + strconv.Itoa(hour) + "_t" + strconv.Itoa(taskNum)
+			// fmt.Printf("%v: %v\n", nameStr, val)
+		}
+	}
+}
+
+func (tp *TaskParams) writeLPOutput() {
+
 }

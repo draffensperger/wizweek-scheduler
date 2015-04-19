@@ -198,3 +198,44 @@ func TestDeadlineAndOnOrAfter(t *testing.T) {
 		So(tasks[4].StartOnOrAfterHourIndex, ShouldEqual, 0)
 	})
 }
+
+const json4 = `{	
+	"timeZone": "America/New_York",
+	"weeklyTaskBlocks": [
+		[],
+		[{"start": "10:00", "end": "12:00"}],
+		[{"start": "9:00", "end": "10:00"}, {"start": "11:30", "end": "14:30"}],
+		[],
+		[],
+		[{"start": "16:00", "end": "18:00"}],
+		[]
+	],	
+	"appointments": [	],
+	"tasks": [
+		{"title": "Newsletter", "estimatedHours": 2, "reward": 6, "deadline": "2015-02-20T22:00:00Z", "startOnOrAfter": "2015-02-17T15:00:00Z"},
+		{"title": "Reimbursements", "estimatedHours": 1, "reward": 3, "deadline": "2015-02-23T22:00:00Z"},
+		{"title": "Plan study", "estimatedHours": 1, "reward": 3, "startOnOrAfter": "2015-02-18T15:00:00Z"},
+		{"title": "Past due", "estimatedHours": 1, "reward": 3, "deadline": "2015-01-01T22:00:00Z"},
+		{"title": "Admin work", "estimatedHours": 1, "reward": 3}				
+	],
+	"startTaskSchedule": "2015-02-16T14:00:00Z",
+	"endTaskSchedule": "2015-02-23T22:00:00Z"
+}`
+
+func TestCalcSchedule(t *testing.T) {
+	Convey("With tasks specified, it will calculate the schedule highest reward first, respecting deadlines and or or after", t, func() {
+		var tp TaskParams
+		ParseTaskParams(json4, &tp)
+		tp.CalcSchedule()
+
+		titles := make([]string, len(tp.TaskSchedule))
+		for i, task := range tp.TaskSchedule {
+			if task == nil {
+				titles[i] = ""
+			} else {
+				titles[i] = task.Title
+			}
+		}
+		So(titles, ShouldResemble, []string{"Newsletter", "Newsletter", "Reimbursements", "Plan study", "Past due", "Admin work", "", "", "", ""})
+	})
+}
