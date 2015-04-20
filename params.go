@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/draffensperger/golp"
+	"math"
 	"strconv"
 	"strings"
 	. "time"
@@ -31,19 +32,31 @@ func ParseTaskParams(paramsJSON string, tp *TaskParams) error {
 }
 
 func (tp *TaskParams) CalcSchedule() error {
+	if err := tp.deadlineInPastErr(); err != nil {
+		return err
+	}
+
 	if err := tp.setupLP(); err != nil {
 		return err
 	}
 
 	tp.lp.SetVerboseLevel(golp.IMPORTANT)
+	//tp.lp.WriteToStdout()
 	ret := tp.lp.Solve()
 	if ret != 0 {
 		return errors.New(`Could not solve linear program`)
 	}
 
-	tp.interpretLPResults()
+	if err := tp.interpretTaskSchedule(); err != nil {
+		return err
+	}
+	tp.formatTaskEvents()
 
 	return nil
+}
+
+func (tp *TaskParams) TaskScheduleJSON() ([]byte, error) {
+	return json.MarshalIndent(tp.TaskEvents, "", "  ")
 }
 
 func (tp *TaskParams) localizeTimes() {
@@ -66,6 +79,15 @@ type TaskParams struct {
 	TaskHours         []Time
 	lp                *golp.LP
 	TaskSchedule      []*Task
+	TaskEvents        []TaskEvent
+}
+
+type TaskEvent struct {
+	*Task  `json:"-"`
+	Title  string `json:"title"`
+	Start  Time   `json:"start"`
+	End    Time   `json:"end"`
+	Finish bool   `json:"finish"`
 }
 
 type Task struct {
@@ -76,6 +98,7 @@ type Task struct {
 	DeadlineHourIndex       int
 	StartOnOrAfter          Time
 	StartOnOrAfterHourIndex int
+	hoursScheduled          float64
 }
 
 type TimeBlock struct {
@@ -257,7 +280,7 @@ func (tp *TaskParams) addTaskConstraints() {
 func (tp *TaskParams) addDeadlineConstraints() {
 	// Total amount done on task with deadline up to the deadline hour index must equal the estimated hours
 	for taskNum, task := range tp.Tasks {
-		if task.DeadlineHourIndex < len(tp.Tasks) && task.DeadlineHourIndex >= 0 {
+		if task.DeadlineHourIndex < len(tp.TaskHours) && task.DeadlineHourIndex >= 0 {
 			entries := make([]golp.Entry, task.DeadlineHourIndex+1)
 			for hour := 0; hour <= task.DeadlineHourIndex; hour++ {
 				entries[hour].Col = tp.col(hour, taskNum)
@@ -296,21 +319,47 @@ func (tp *TaskParams) addObjectiveFunction() {
 	tp.lp.SetObjFn(row, true)
 }
 
-func (tp *TaskParams) interpretLPResults() {
+func (tp *TaskParams) interpretTaskSchedule() error {
 	vars := tp.lp.GetVariables()
 	tp.TaskSchedule = make([]*Task, len(tp.TaskHours))
 	for hour := 0; hour < len(tp.TaskHours); hour++ {
 		for taskNum := 0; taskNum < len(tp.Tasks); taskNum++ {
 			val := vars[tp.col(hour, taskNum)]
-			if val == 1.0 {
+
+			delta := 0.001
+			if math.Abs(val-1.0) < delta {
 				tp.TaskSchedule[hour] = &tp.Tasks[taskNum]
+			} else if math.Abs(val) > delta {
+				return errors.New("Linear program assign time value that is not 1.0 or 0.0")
 			}
-			// nameStr := "h" + strconv.Itoa(hour) + "_t" + strconv.Itoa(taskNum)
-			// fmt.Printf("%v: %v\n", nameStr, val)
 		}
 	}
+	return nil
 }
 
-func (tp *TaskParams) writeLPOutput() {
+func (tp *TaskParams) formatTaskEvents() {
+	tp.TaskEvents = make([]TaskEvent, 0)
 
+	var hourAhead Time
+	var prevTask *Task
+	for i, task := range tp.TaskSchedule {
+		if task != nil {
+			if prevTask != task || tp.TaskHours[i].After(hourAhead) {
+				var newEvent TaskEvent
+				newEvent.Start = tp.TaskHours[i]
+				newEvent.Task = task
+				newEvent.Title = task.Title
+				tp.TaskEvents = append(tp.TaskEvents, newEvent)
+			}
+
+			event := &tp.TaskEvents[len(tp.TaskEvents)-1]
+			task.hoursScheduled++
+			if task.hoursScheduled >= task.EstimatedHours {
+				event.Finish = true
+			}
+			hourAhead = tp.TaskHours[i].Add(Hour)
+			event.End = hourAhead
+		}
+		prevTask = task
+	}
 }
