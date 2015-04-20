@@ -1,17 +1,74 @@
-package schedule
+package main
 
 import (
 	"encoding/json"
 	"errors"
 	"github.com/draffensperger/golp"
+	"github.com/k0kubun/pp"
+	"io/ioutil"
+	"log"
 	"math"
+	"net/http"
 	"strconv"
 	"strings"
 	. "time"
 )
 
-func ParseTaskParams(paramsJSON string, tp *TaskParams) error {
-	if err := json.Unmarshal([]byte(paramsJSON), tp); err != nil {
+func p(params ...interface{}) {
+	if len(params) == 0 {
+		pp.Println()
+	} else if len(params) == 1 {
+		pp.Println(params[0].(string))
+	} else {
+		pp.Printf(params[0].(string)+" %v\n", params[1])
+	}
+}
+
+func main() {
+	http.HandleFunc("/", computeScheduleHandler)
+	listen := ":8000"
+	p("Listening on", listen)
+	log.Fatal(http.ListenAndServe(listen, nil))
+}
+
+func computeScheduleHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Must use POST", http.StatusInternalServerError)
+		return
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	scheduleJSON, err := parseAndComputeSchedule(body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	_, err = w.Write(scheduleJSON)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func parseAndComputeSchedule(paramsJSON []byte) ([]byte, error) {
+	var tp TaskParams
+	if err := parseTaskParams(paramsJSON, &tp); err != nil {
+		return nil, err
+	}
+	if err := tp.calcSchedule(); err != nil {
+		return nil, err
+	}
+	return tp.taskScheduleJSON()
+}
+
+func parseTaskParams(paramsJSON []byte, tp *TaskParams) error {
+	if err := json.Unmarshal(paramsJSON, tp); err != nil {
 		return err
 	}
 
@@ -31,7 +88,7 @@ func ParseTaskParams(paramsJSON string, tp *TaskParams) error {
 	return nil
 }
 
-func (tp *TaskParams) CalcSchedule() error {
+func (tp *TaskParams) calcSchedule() error {
 	if err := tp.deadlineInPastErr(); err != nil {
 		return err
 	}
@@ -55,7 +112,7 @@ func (tp *TaskParams) CalcSchedule() error {
 	return nil
 }
 
-func (tp *TaskParams) TaskScheduleJSON() ([]byte, error) {
+func (tp *TaskParams) taskScheduleJSON() ([]byte, error) {
 	return json.MarshalIndent(tp.TaskEvents, "", "  ")
 }
 

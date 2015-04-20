@@ -1,22 +1,11 @@
-package schedule
+package main
 
 import (
 	"encoding/json"
-	"github.com/k0kubun/pp"
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 	. "time"
 )
-
-func p(params ...interface{}) {
-	if len(params) == 0 {
-		pp.Println()
-	} else if len(params) == 1 {
-		pp.Println(params[0].(string))
-	} else {
-		pp.Printf(params[0].(string)+" %v\n", params[1])
-	}
-}
 
 var EST *Location
 
@@ -25,7 +14,7 @@ func DateHour(year int, month Month, day, hour int) Time {
 }
 
 func TestTaskParams(t *testing.T) {
-	j := `{	
+	j := []byte(`{	
 		"timeZone": "America/New_York",
 		"weeklyTaskBlocks": [
 			[],
@@ -43,11 +32,11 @@ func TestTaskParams(t *testing.T) {
 		],
 		"startTaskSchedule": "2015-02-16T14:00:00Z",
 		"endTaskSchedule": "2015-02-20T22:00:00Z"
-	}`
+	}`)
 
 	Convey("When task params parsed from JSON", t, func() {
 		var tp TaskParams
-		err := ParseTaskParams(j, &tp)
+		err := parseTaskParams(j, &tp)
 		So(err, ShouldBeNil)
 
 		Convey("Values are parsed correctly", func() {
@@ -86,7 +75,7 @@ func TestTaskParams(t *testing.T) {
 }
 
 func TestTaskHours(t *testing.T) {
-	j := `{	
+	j := []byte(`{	
 		"timeZone": "America/New_York",
 		"weeklyTaskBlocks": [
 			[],
@@ -104,11 +93,12 @@ func TestTaskHours(t *testing.T) {
 		],
 		"startTaskSchedule": "2015-02-16T14:00:00Z",
 		"endTaskSchedule": "2015-02-25T22:00:00Z"
-	}`
+	}`)
 
 	Convey("With task params specified it produces a series of task hour start times", t, func() {
 		var tp TaskParams
-		ParseTaskParams(j, &tp)
+		err := parseTaskParams(j, &tp)
+		So(err, ShouldBeNil)
 		hours := tp.TaskHours
 		So(len(hours), ShouldEqual, 14)
 
@@ -134,7 +124,7 @@ func TestTaskHours(t *testing.T) {
 }
 
 func TestDeadlineAndOnOrAfter(t *testing.T) {
-	j := `{	
+	j := []byte(`{	
 		"timeZone": "America/New_York",
 		"weeklyTaskBlocks": [
 			[],
@@ -155,11 +145,12 @@ func TestDeadlineAndOnOrAfter(t *testing.T) {
 		],
 		"startTaskSchedule": "2015-02-16T14:00:00Z",
 		"endTaskSchedule": "2015-02-25T22:00:00Z"
-	}`
+	}`)
 
 	Convey("With task params specified it sets the hour indicies for deadlines and start on or after", t, func() {
 		var tp TaskParams
-		ParseTaskParams(j, &tp)
+		err := parseTaskParams(j, &tp)
+		So(err, ShouldBeNil)
 		tasks := tp.Tasks
 
 		So(len(tasks), ShouldEqual, 5)
@@ -177,7 +168,7 @@ func TestDeadlineAndOnOrAfter(t *testing.T) {
 }
 
 func TestCalcSchedule(t *testing.T) {
-	inJSON := `{	
+	in := []byte(`{	
 		"timeZone": "America/New_York",
 		"weeklyTaskBlocks": [
 			[],
@@ -198,9 +189,9 @@ func TestCalcSchedule(t *testing.T) {
 		],
 		"startTaskSchedule": "2015-02-16T14:00:00Z",
 		"endTaskSchedule": "2015-02-28T22:00:00Z"
-	}`
+	}`)
 
-	outJSON := `[
+	expectedOut := []byte(`[
 	    { "title": "Admin", "start": "2015-02-16T10:00:00-05:00", "end": "2015-02-16T11:00:00-05:00", "finish": true },
 	    { "title": "MPD", "start": "2015-02-16T11:00:00-05:00", "end": "2015-02-16T12:00:00-05:00", "finish": false },
 	    { "title": "MPD", "start": "2015-02-17T09:00:00-05:00", "end": "2015-02-17T10:00:00-05:00", "finish": false },
@@ -212,22 +203,18 @@ func TestCalcSchedule(t *testing.T) {
 	    { "title": "Reimbursements", "start": "2015-02-23T11:00:00-05:00", "end": "2015-02-23T12:00:00-05:00", "finish": true },
 	    { "title": "MPD", "start": "2015-02-24T09:00:00-05:00", "end": "2015-02-24T10:00:00-05:00", "finish": false },
 	    { "title": "MPD", "start": "2015-02-24T11:30:00-05:00", "end": "2015-02-24T12:30:00-05:00", "finish": true }
-	  ]`
+	  ]`)
 
 	Convey("With tasks specified, it will calculate the schedule highest reward first, respecting deadlines and or or after", t, func() {
-		var tp TaskParams
-		ParseTaskParams(inJSON, &tp)
-		err := tp.CalcSchedule()
+		actualOut, err := ParseAndComputeSchedule(in)
 		So(err, ShouldBeNil)
 
 		var expectedParsed []interface{}
-		err = json.Unmarshal([]byte(outJSON), &expectedParsed)
+		err = json.Unmarshal(expectedOut, &expectedParsed)
 		So(err, ShouldBeNil)
 
-		actualJSON, err := tp.TaskScheduleJSON()
-		So(err, ShouldBeNil)
 		var actualParsed []interface{}
-		err = json.Unmarshal(actualJSON, &actualParsed)
+		err = json.Unmarshal(actualOut, &actualParsed)
 		So(err, ShouldBeNil)
 
 		So(actualParsed, ShouldResemble, expectedParsed)
