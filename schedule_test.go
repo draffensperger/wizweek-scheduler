@@ -2,10 +2,21 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/k0kubun/pp"
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 	. "time"
 )
+
+func p(params ...interface{}) {
+	if len(params) == 0 {
+		pp.Println()
+	} else if len(params) == 1 {
+		pp.Println(params[0])
+	} else {
+		pp.Printf(params[0].(string)+" %v\n", params[1])
+	}
+}
 
 var EST *Location
 
@@ -86,7 +97,7 @@ func TestTaskHours(t *testing.T) {
 			[{"start": "16:00", "end": "18:00"}],
 			[]
 		],	
-		"appointments": [	],
+		"appointments": [	{"title": "Meeting", "start": "2015-02-17T16:00:00Z", "end": "2015-02-17T18:00:00Z"}],
 		"tasks": [
 			{"title": "Newsletter", "estimatedHours": 6, "reward": 6, "deadline": "2015-02-16T22:00:00Z"},
 			{"title": "Reimbursements", "estimatedHours": 1, "reward": 3, "deadline": "2015-02-17T22:00:00Z"}
@@ -99,8 +110,15 @@ func TestTaskHours(t *testing.T) {
 		var tp TaskParams
 		err := parseTaskParams(j, &tp)
 		So(err, ShouldBeNil)
+
+		appts := tp.Appointments
+		So(len(appts), ShouldEqual, 1)
+		So(appts, ShouldResemble,
+			[]Appointment{Appointment{Title: "Meeting", Start: Date(2015, 2, 17, 11, 0, 0, 0, EST),
+				End: Date(2015, 2, 17, 13, 0, 0, 0, EST)}})
+
 		hours := tp.TaskHours
-		So(len(hours), ShouldEqual, 14)
+		So(len(hours), ShouldEqual, 12)
 
 		EST, err := LoadLocation("America/New_York")
 		So(err, ShouldBeNil)
@@ -108,8 +126,6 @@ func TestTaskHours(t *testing.T) {
 			Date(2015, 2, 16, 10, 0, 0, 0, EST),
 			Date(2015, 2, 16, 11, 0, 0, 0, EST),
 			Date(2015, 2, 17, 9, 0, 0, 0, EST),
-			Date(2015, 2, 17, 11, 30, 0, 0, EST),
-			Date(2015, 2, 17, 12, 30, 0, 0, EST),
 			Date(2015, 2, 17, 13, 30, 0, 0, EST),
 			Date(2015, 2, 20, 16, 0, 0, 0, EST),
 			Date(2015, 2, 20, 17, 0, 0, 0, EST),
@@ -206,7 +222,7 @@ func TestCalcSchedule(t *testing.T) {
 	  ]`)
 
 	Convey("With tasks specified, it will calculate the schedule highest reward first, respecting deadlines and or or after", t, func() {
-		actualOut, err := ParseAndComputeSchedule(in)
+		actualOut, err := parseAndComputeSchedule(in)
 		So(err, ShouldBeNil)
 
 		var expectedParsed []interface{}

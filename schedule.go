@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/draffensperger/golp"
-	"github.com/k0kubun/pp"
 	"io/ioutil"
 	"log"
 	"math"
@@ -14,26 +14,16 @@ import (
 	. "time"
 )
 
-func p(params ...interface{}) {
-	if len(params) == 0 {
-		pp.Println()
-	} else if len(params) == 1 {
-		pp.Println(params[0].(string))
-	} else {
-		pp.Printf(params[0].(string)+" %v\n", params[1])
-	}
-}
-
 func main() {
 	http.HandleFunc("/", computeScheduleHandler)
 	listen := ":8000"
-	p("Listening on", listen)
+	fmt.Printf("Listening on %v\n", listen)
 	log.Fatal(http.ListenAndServe(listen, nil))
 }
 
 func computeScheduleHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		http.Error(w, "Must use POST", http.StatusInternalServerError)
+		http.Error(w, "Must use POST", http.StatusBadRequest)
 		return
 	}
 
@@ -124,6 +114,11 @@ func (tp *TaskParams) localizeTimes() {
 		tp.Tasks[i].Deadline = tp.Tasks[i].Deadline.In(tp.Location)
 		tp.Tasks[i].StartOnOrAfter = tp.Tasks[i].StartOnOrAfter.In(tp.Location)
 	}
+
+	for i := 0; i < len(tp.Appointments); i++ {
+		tp.Appointments[i].Start = tp.Appointments[i].Start.In(tp.Location)
+		tp.Appointments[i].End = tp.Appointments[i].End.In(tp.Location)
+	}
 }
 
 type TaskParams struct {
@@ -131,12 +126,19 @@ type TaskParams struct {
 	*Location
 	WeeklyTaskBlocks  [][]TimeBlock
 	Tasks             []Task
+	Appointments      []Appointment
 	StartTaskSchedule Time
 	EndTaskSchedule   Time
 	TaskHours         []Time
 	lp                *golp.LP
 	TaskSchedule      []*Task
 	TaskEvents        []TaskEvent
+}
+
+type Appointment struct {
+	Title string
+	Start Time
+	End   Time
 }
 
 type TaskEvent struct {
@@ -227,13 +229,25 @@ func (tp *TaskParams) calculateTaskHours() {
 		if hourAhead.After(blockEnd) {
 			blockEnd = tp.moveTimeToNextBlock(&t)
 		} else {
-			taskHours = append(taskHours, t)
+			if !tp.appointmentInRange(t, hourAhead) {
+				taskHours = append(taskHours, t)
+			}
 			t = hourAhead
 		}
 		hourAhead = t.Add(Hour)
 	}
 
 	tp.TaskHours = taskHours
+}
+
+// Could probably be made more efficient
+func (tp *TaskParams) appointmentInRange(start, end Time) bool {
+	for _, appt := range tp.Appointments {
+		if appt.Start.Before(end) && appt.End.After(start) {
+			return true
+		}
+	}
+	return false
 }
 
 // Return the index for the start of the last hour that you could work on a task to finish it by time t
