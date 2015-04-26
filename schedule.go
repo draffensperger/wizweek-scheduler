@@ -42,7 +42,7 @@ func computeScheduleHandler(w http.ResponseWriter, r *http.Request) {
 
 	scheduleJSON, err := parseAndComputeSchedule(body)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
