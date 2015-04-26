@@ -9,6 +9,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	. "time"
@@ -16,7 +17,13 @@ import (
 
 func main() {
 	http.HandleFunc("/", computeScheduleHandler)
-	listen := ":8000"
+
+	listen := os.Getenv("PORT")
+	if listen == "" {
+		listen = ":8000"
+	} else {
+		listen = ":" + listen
+	}
 	fmt.Printf("Listening on %v\n", listen)
 	log.Fatal(http.ListenAndServe(listen, nil))
 }
