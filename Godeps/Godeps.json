@@ -1,0 +1,33 @@
+{
+	"ImportPath": "github.com/draffensperger/schedule",
+	"GoVersion": "go1.4.1",
+	"Deps": [
+		{
+			"ImportPath": "github.com/draffensperger/golp",
+			"Rev": "d1b55b1df889b83496ce6059973cf7c643220f65"
+		},
+		{
+			"ImportPath": "github.com/jtolds/gls",
+			"Rev": "f1ac7f4f24f50328e6bc838ca4437d1612a0243c"
+		},
+		{
+			"ImportPath": "github.com/k0kubun/pp",
+			"Comment": "v2.0.1-1-ge14f383",
+			"Rev": "e14f383ae6cec46144a99394c284d3edb0970e65"
+		},
+		{
+			"ImportPath": "github.com/mattn/go-colorable",
+			"Rev": "043ae16291351db8465272edf465c9f388161627"
+		},
+		{
+			"ImportPath": "github.com/smartystreets/assertions",
+			"Comment": "1.5.0-379-g75acd40",
+			"Rev": "75acd402ca38dc205641a826bb58b9de014926dd"
+		},
+		{
+			"ImportPath": "github.com/smartystreets/goconvey/convey",
+			"Comment": "1.5.0-380-g1d9daca",
+			"Rev": "1d9daca83fc3cf35d01b9d0ac2debad3453bf178"
+		}
+	]
+}
