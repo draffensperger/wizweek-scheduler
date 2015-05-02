@@ -42,7 +42,12 @@ func computeScheduleHandler(w http.ResponseWriter, r *http.Request) {
 
 	scheduleJSON, err := parseAndComputeSchedule(body)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		errJSON, jsonMarshalErr := json.Marshal(map[string]string{"err": err.Error()})
+		if jsonMarshalErr != nil {
+			http.Error(w, jsonMarshalErr.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Write(errJSON)
 		return
 	}
 
@@ -292,7 +297,7 @@ func (tp TaskParams) onOrAfterAsTaskHour(onOrAfter Time) int {
 func (tp TaskParams) deadlineInPastErr() error {
 	for _, task := range tp.Tasks {
 		if task.DeadlineHourIndex < 0 {
-			return errors.New(`Deadline in the past for task`)
+			return errors.New("Deadline in the past for task: " + task.Title)
 		}
 	}
 	return nil
