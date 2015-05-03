@@ -208,17 +208,17 @@ func TestCalcSchedule(t *testing.T) {
 	}`)
 
 	expectedOut := []byte(`[
-	    { "title": "Admin", "start": "2015-02-16T10:00:00-05:00", "end": "2015-02-16T11:00:00-05:00", "finish": true },
-	    { "title": "MPD", "start": "2015-02-16T11:00:00-05:00", "end": "2015-02-16T12:00:00-05:00", "finish": false },
-	    { "title": "MPD", "start": "2015-02-17T09:00:00-05:00", "end": "2015-02-17T10:00:00-05:00", "finish": false },
-	    { "title": "MPD", "start": "2015-02-17T11:30:00-05:00", "end": "2015-02-17T12:30:00-05:00", "finish": false },
-	    { "title": "Newsletter", "start": "2015-02-17T12:30:00-05:00", "end": "2015-02-17T14:30:00-05:00", "finish": true },
-	    { "title": "Study", "start": "2015-02-20T16:00:00-05:00", "end": "2015-02-20T17:00:00-05:00", "finish": true },
-	    { "title": "MPD", "start": "2015-02-20T17:00:00-05:00", "end": "2015-02-20T18:00:00-05:00", "finish": false },
-	    { "title": "MPD", "start": "2015-02-23T10:00:00-05:00", "end": "2015-02-23T11:00:00-05:00", "finish": false },
-	    { "title": "Reimbursements", "start": "2015-02-23T11:00:00-05:00", "end": "2015-02-23T12:00:00-05:00", "finish": true },
-	    { "title": "MPD", "start": "2015-02-24T09:00:00-05:00", "end": "2015-02-24T10:00:00-05:00", "finish": false },
-	    { "title": "MPD", "start": "2015-02-24T11:30:00-05:00", "end": "2015-02-24T12:30:00-05:00", "finish": true }
+	    { "title": "Admin", "start": "2015-02-16T15:00:00Z", "end": "2015-02-16T16:00:00Z", "finish": true },
+	    { "title": "MPD", "start": "2015-02-16T16:00:00Z", "end": "2015-02-16T17:00:00Z", "finish": false },
+	    { "title": "MPD", "start": "2015-02-17T14:00:00Z", "end": "2015-02-17T15:00:00Z", "finish": false },
+	    { "title": "MPD", "start": "2015-02-17T16:30:00Z", "end": "2015-02-17T17:30:00Z", "finish": false },
+	    { "title": "Newsletter", "start": "2015-02-17T17:30:00Z", "end": "2015-02-17T19:30:00Z", "finish": true },
+	    { "title": "Study", "start": "2015-02-20T21:00:00Z", "end": "2015-02-20T22:00:00Z", "finish": true },
+	    { "title": "MPD", "start": "2015-02-20T22:00:00Z", "end": "2015-02-20T23:00:00Z", "finish": false },
+	    { "title": "MPD", "start": "2015-02-23T15:00:00Z", "end": "2015-02-23T16:00:00Z", "finish": false },
+	    { "title": "Reimbursements", "start": "2015-02-23T16:00:00Z", "end": "2015-02-23T17:00:00Z", "finish": true },
+	    { "title": "MPD", "start": "2015-02-24T14:00:00Z", "end": "2015-02-24T15:00:00Z", "finish": false },
+	    { "title": "MPD", "start": "2015-02-24T16:30:00Z", "end": "2015-02-24T17:30:00Z", "finish": true }
 	  ]`)
 
 	Convey("With tasks specified, it will calculate the schedule highest reward first, respecting deadlines and or or after", t, func() {

@@ -66,6 +66,7 @@ func parseAndComputeSchedule(paramsJSON []byte) ([]byte, error) {
 	if err := tp.calcSchedule(); err != nil {
 		return nil, err
 	}
+
 	return tp.taskScheduleJSON()
 }
 
@@ -444,5 +445,10 @@ func (tp *TaskParams) formatTaskEvents() {
 			event.End = hourAhead
 		}
 		prevTask = task
+	}
+
+	for i := 0; i < len(tp.TaskEvents); i++ {
+		tp.TaskEvents[i].Start = tp.TaskEvents[i].Start.In(UTC)
+		tp.TaskEvents[i].End = tp.TaskEvents[i].End.In(UTC)
 	}
 }
