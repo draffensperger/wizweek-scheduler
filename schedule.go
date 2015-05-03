@@ -391,12 +391,13 @@ func (tp *TaskParams) addStartContraints() {
 
 func (tp *TaskParams) addObjectiveFunction() {
 	// Objective function
-	decayRate := 0.95
+	decayRate := 0.99
 	curHourValue := 1.0
 	row := make([]float64, len(tp.Tasks)*len(tp.TaskHours))
 	for hour := 0; hour < len(tp.TaskHours); hour++ {
 		for taskNum, task := range tp.Tasks {
-			row[tp.col(hour, taskNum)] = curHourValue * task.Reward / task.EstimatedHours
+			taskLengthPenalty := math.Pow(decayRate, task.EstimatedHours)
+			row[tp.col(hour, taskNum)] = curHourValue * taskLengthPenalty * task.Reward / task.EstimatedHours
 		}
 		curHourValue *= decayRate
 	}
