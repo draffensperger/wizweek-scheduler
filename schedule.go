@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -86,6 +87,9 @@ func parseTaskParams(paramsJSON []byte, tp *TaskParams) error {
 	for i := 0; i < len(tp.Tasks); i++ {
 		tp.Tasks[i].DeadlineHourIndex = tp.deadlineAsTaskHour(tp.Tasks[i].Deadline)
 		tp.Tasks[i].StartOnOrAfterHourIndex = tp.onOrAfterAsTaskHour(tp.Tasks[i].StartOnOrAfter)
+
+		// Add a small random nudge to each task reward value to break ties and lump similar tasks together
+		tp.Tasks[i].Reward *= 1.0 + (rand.Float64()-0.5)/100000.0
 	}
 
 	return nil
