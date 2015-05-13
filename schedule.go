@@ -84,6 +84,7 @@ func parseTaskParams(paramsJSON []byte, tp *TaskParams) error {
 	tp.localizeTimes()
 	tp.calculateTaskHours()
 
+	rand.Seed(7777) // Fixed seed so random nudges are deterministic across the same run
 	for i := 0; i < len(tp.Tasks); i++ {
 		tp.Tasks[i].DeadlineHourIndex = tp.deadlineAsTaskHour(tp.Tasks[i].Deadline)
 		tp.Tasks[i].StartOnOrAfterHourIndex = tp.onOrAfterAsTaskHour(tp.Tasks[i].StartOnOrAfter)

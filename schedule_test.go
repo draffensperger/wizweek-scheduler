@@ -63,13 +63,13 @@ func TestTaskParams(t *testing.T) {
 			task0 := tp.Tasks[0]
 			So(task0.Title, ShouldEqual, "Newsletter")
 			So(task0.EstimatedHours, ShouldEqual, 6)
-			So(task0.Reward, ShouldEqual, 6)
+			So(task0.Reward, ShouldAlmostEqual, 6.0, 0.001)
 			So(task0.Deadline, ShouldResemble, DateHour(2015, 2, 16, 17))
 
 			task1 := tp.Tasks[1]
 			So(task1.Title, ShouldEqual, "Reimbursements")
 			So(task1.EstimatedHours, ShouldEqual, 1)
-			So(task1.Reward, ShouldEqual, 3)
+			So(task1.Reward, ShouldAlmostEqual, 3.0, 0.001)
 			So(task1.Deadline, ShouldResemble, DateHour(2015, 2, 17, 17))
 
 			So(len(tp.WeeklyTaskBlocks), ShouldEqual, 7)
