@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/draffensperger/golp"
 	"io/ioutil"
 	"log"
 	"math"
@@ -14,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	. "time"
+
+	"github.com/draffensperger/golp"
 )
 
 func main() {
