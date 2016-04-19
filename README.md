@@ -1,4 +1,4 @@
-# Task scheduler web service
+# Task schedule optimizer web service
 
 This is a web service written to optimally schedule a set of work tasks
 given the following:
@@ -67,7 +67,7 @@ the current time and `endTaskSchedule` should be far enough into the future to
 allow for scheduling all the tasks assuming there are no conflicts with
 deadlines.
 
-Here's the resopnse our sample request would give:
+Here's the response our sample request would give:
 ```
 [
   {
@@ -101,7 +101,7 @@ will still be more work blocks on it to come.
 If a deadline cannot be met the service will respond with:
 `{"err":"Could not solve linear program"}`
 
-## How it works
+## How the optimization works
 
 Here's a general overview of how the scheduler works.
 
@@ -145,13 +145,27 @@ Internally this uses the [golp](https://github.com/draffensperger/golp) library
 which wraps the [LPSolve](http://lpsolve.sourceforge.net/5.5/)linear programming
 solver.
 
+## How to use it
+
+Currently in my personal use of this for my own schedule I use Google sheets
+with a [Google apps script](https://gist.github.com/draffensperger/039ca1834b03cb49c551eaa34d5abb7c) as the front-end for this service.
+
+I have started on a [web front end](https://github.com/draffensperger/wizweek)
+for it but haven't gotten very far with it.
+
+Feel free to use it to build your own personal task scheduling system as well!
+
 ## Deployment
 
 This has been set up to be easily deployed to Heroku as the lpsolve55.so file is
 bundled with the code and there is an included Heroku `Procfile` which specifies
 how to run the Go service.
 
-## License
+## License and Acknowledgements
+
+This idea of optimizing your tasks is based on an Excel spreadsheet my dad, John
+Raffensperger users to manging his tasks. For his explanation of it and a link
+to his spreadsheet, see [john.raffensperger.org/](http://john.raffensperger.org/).
 
 The bundled `lpsolve55.so` file is [LGPL licensed](http://lpsolve.sourceforge.net/5.0/LGPL.htm).
 
