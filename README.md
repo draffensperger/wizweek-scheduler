@@ -148,7 +148,9 @@ solver.
 ## How to use it
 
 Currently in my personal use of this for my own schedule I use Google sheets
-with a [Google apps script](https://gist.github.com/draffensperger/039ca1834b03cb49c551eaa34d5abb7c) as the front-end for this service.
+with a [Google apps script](https://gist.github.com/draffensperger/039ca1834b03cb49c551eaa34d5abb7c) as the front-end for this service, which also
+takes care of fetching appointments from my Google calendar and saving the task
+blocks to a separate one.
 
 I have started on a [web front end](https://github.com/draffensperger/wizweek)
 for it but haven't gotten very far with it.
