@@ -31,8 +31,12 @@ func main() {
 }
 
 func computeScheduleHandler(w http.ResponseWriter, r *http.Request) {
+	// Allow CORS requests
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
 	if r.Method != "POST" {
-		http.Error(w, "Must use POST", http.StatusBadRequest)
+		// Return simple OK for a get request to make pinging the service friendly.
+		w.Write([]byte("OK"))
 		return
 	}
 
